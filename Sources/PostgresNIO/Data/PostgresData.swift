@@ -67,7 +67,31 @@ public struct PostgresData: CustomStringConvertible, CustomDebugStringConvertibl
         case .float4Array:
             description = self.array(of: Float.self)?.description
         case .textArray:
-            description = self.array(of: String.self)?.description
+          // description = self.array(of: String.self)?.description
+          var stringBuilder: String
+          stringBuilder = "["
+          // textArray needs to allow NULLABLE values
+          if let array = self.array {
+            for data in array {
+              if stringBuilder.count > 1 {
+                stringBuilder  += ","
+              }
+              
+              if let item = String(postgresData: data) {
+                if item == "|NULL|" {
+                  stringBuilder += "NULL"
+                } else {
+                  stringBuilder += "\"\(item)\""
+                }
+              } else {
+                stringBuilder += "NULL"
+              }
+            }
+            description = stringBuilder + "]"
+          } else {
+            description = nil
+          }
+          
         case .jsonbArray:
             description = self.array?.description
         default:
