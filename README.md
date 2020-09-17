@@ -31,7 +31,7 @@ The table below shows a list of PostgresNIO major releases alongside their compa
 Use the SPM string to easily include the dependendency in your `Package.swift` file.
 
 ```swift
-.package(url: "https://github.com/zanoroy/postgres-nio.git", from: 1.3.2)
+.package(url: "https://github.com/zanoroy/postgres-nio.git", from: 1.4.0-bq.1)
 ```
 
 ### Supported Platforms
