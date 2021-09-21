@@ -1,4 +1,4 @@
-import NIO
+import NIOCore
 
 extension PostgresMessage {
     /// Identifies the message as a Bind command.
@@ -39,8 +39,8 @@ extension PostgresMessage {
         
         /// Serializes this message into a byte buffer.
         public func serialize(into buffer: inout ByteBuffer) {
-            buffer.write(nullTerminated: self.portalName)
-            buffer.write(nullTerminated: self.statementName)
+            buffer.writeNullTerminatedString(self.portalName)
+            buffer.writeNullTerminatedString(self.statementName)
             
             buffer.write(array: self.parameterFormatCodes)
             buffer.write(array: self.parameters) {

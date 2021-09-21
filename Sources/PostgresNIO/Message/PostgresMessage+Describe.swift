@@ -1,4 +1,4 @@
-import NIO
+import NIOCore
 
 extension PostgresMessage {
     /// Identifies the message as a Describe command.
@@ -31,7 +31,7 @@ extension PostgresMessage {
         /// Serializes this message into a byte buffer.
         public func serialize(into buffer: inout ByteBuffer) {
             buffer.writeInteger(command.rawValue)
-            buffer.write(nullTerminated: name)
+            buffer.writeNullTerminatedString(name)
         }
     }
 }

@@ -1,5 +1,6 @@
+import NIOCore
+import NIOSSL
 import Logging
-import NIO
 
 extension PostgresConnection {
     public static func connect(
@@ -9,43 +10,26 @@ extension PostgresConnection {
         logger: Logger = .init(label: "codes.vapor.postgres"),
         on eventLoop: EventLoop
     ) -> EventLoopFuture<PostgresConnection> {
-        let bootstrap = ClientBootstrap(group: eventLoop)
-            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-        return bootstrap.connect(to: socketAddress).flatMap { channel in
-            return channel.pipeline.addHandlers([
-                ByteToMessageHandler(PostgresMessageDecoder(logger: logger)),
-                MessageToByteHandler(PostgresMessageEncoder(logger: logger)),
-                PostgresRequestHandler(logger: logger),
-                PostgresErrorHandler(logger: logger)
-            ]).map {
-                return PostgresConnection(channel: channel, logger: logger)
-            }
-        }.flatMap { (conn: PostgresConnection) in
-            if let tlsConfiguration = tlsConfiguration {
-                return conn.requestTLS(
-                    using: tlsConfiguration,
-                    serverHostname: serverHostname,
-                    logger: logger
-                ).map { conn }
-            } else {
-                return eventLoop.makeSucceededFuture(conn)
-            }
+        
+        let coders = PSQLConnection.Configuration.Coders(
+            jsonEncoder: PostgresJSONEncoderWrapper(_defaultJSONEncoder),
+            jsonDecoder: PostgresJSONDecoderWrapper(_defaultJSONDecoder)
+        )
+        
+        let configuration = PSQLConnection.Configuration(
+            connection: .resolved(address: socketAddress, serverName: serverHostname),
+            authentication: nil,
+            tlsConfiguration: tlsConfiguration,
+            coders: coders)
+        
+        return PSQLConnection.connect(
+            configuration: configuration,
+            logger: logger,
+            on: eventLoop
+        ).map { connection in
+            PostgresConnection(underlying: connection, logger: logger)
+        }.flatMapErrorThrowing { error in
+            throw error.asAppropriatePostgresError
         }
-    }
-}
-
-
-private final class PostgresErrorHandler: ChannelInboundHandler {
-    typealias InboundIn = Never
-    
-    let logger: Logger
-    init(logger: Logger) {
-        self.logger = logger
-    }
-    
-    func errorCaught(context: ChannelHandlerContext, error: Error) {
-        self.logger.error("Uncaught error: \(error)")
-        context.close(promise: nil)
-        context.fireErrorCaught(error)
     }
 }

@@ -1,4 +1,4 @@
-import NIO
+import NIOCore
 
 extension PostgresMessage {
     /// Identifies an incoming or outgoing postgres message. Sent as the first byte, before the message size.
@@ -132,7 +132,7 @@ extension PostgresMessage {
         
         /// See `CustomStringConvertible`.
         public var description: String {
-            return String(Character(Unicode.Scalar(value)))
+            return String(Unicode.Scalar(self.value))
         }
         
         /// See `ExpressibleByIntegerLiteral`.

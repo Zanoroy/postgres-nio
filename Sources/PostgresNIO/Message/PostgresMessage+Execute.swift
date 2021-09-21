@@ -1,4 +1,4 @@
-import NIO
+import NIOCore
 
 extension PostgresMessage {
     /// Identifies the message as an Execute command.
@@ -20,7 +20,7 @@ extension PostgresMessage {
         
         /// Serializes this message into a byte buffer.
         public func serialize(into buffer: inout ByteBuffer) {
-            buffer.write(nullTerminated: portalName)
+            buffer.writeNullTerminatedString(portalName)
             buffer.writeInteger(self.maxRows)
         }
     }
