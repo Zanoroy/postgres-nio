@@ -8,12 +8,11 @@ class Bytes_PSQLCodableTests: XCTestCase {
         let data = Data((0...UInt8.max))
         
         var buffer = ByteBuffer()
-        data.encode(into: &buffer, context: .forTests())
+        data.encode(into: &buffer, context: .default)
         XCTAssertEqual(data.psqlType, .bytea)
-        let psqlData = PSQLData(bytes: buffer, dataType: .bytea, format: .binary)
         
         var result: Data?
-        XCTAssertNoThrow(result = try psqlData.decode(as: Data.self, context: .forTests()))
+        XCTAssertNoThrow(result = try Data.decode(from: &buffer, type: .bytea, format: .binary, context: .default))
         XCTAssertEqual(data, result)
     }
     
@@ -21,17 +20,16 @@ class Bytes_PSQLCodableTests: XCTestCase {
         let bytes = ByteBuffer(bytes: (0...UInt8.max))
         
         var buffer = ByteBuffer()
-        bytes.encode(into: &buffer, context: .forTests())
+        bytes.encode(into: &buffer, context: .default)
         XCTAssertEqual(bytes.psqlType, .bytea)
-        let psqlData = PSQLData(bytes: buffer, dataType: .bytea, format: .binary)
         
         var result: ByteBuffer?
-        XCTAssertNoThrow(result = try psqlData.decode(as: ByteBuffer.self, context: .forTests()))
+        XCTAssertNoThrow(result = try ByteBuffer.decode(from: &buffer, type: .bytea, format: .binary, context: .default))
         XCTAssertEqual(bytes, result)
     }
     
     func testEncodeSequenceWhereElementUInt8() {
-        struct ByteSequence: Sequence, PSQLEncodable {
+        struct ByteSequence: Sequence, PostgresEncodable {
             typealias Element = UInt8
             typealias Iterator = Array<UInt8>.Iterator
             
@@ -48,7 +46,7 @@ class Bytes_PSQLCodableTests: XCTestCase {
         
         let sequence = ByteSequence()
         var buffer = ByteBuffer()
-        sequence.encode(into: &buffer, context: .forTests())
+        sequence.encode(into: &buffer, context: .default)
         XCTAssertEqual(sequence.psqlType, .bytea)
         XCTAssertEqual(buffer.readableBytes, 256)
     }

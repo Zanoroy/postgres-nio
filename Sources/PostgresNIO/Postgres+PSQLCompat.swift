@@ -1,67 +1,5 @@
 import NIOCore
 
-struct PostgresJSONDecoderWrapper: PSQLJSONDecoder {
-    let downstream: PostgresJSONDecoder
-    
-    init(_ downstream: PostgresJSONDecoder) {
-        self.downstream = downstream
-    }
-    
-    func decode<T>(_ type: T.Type, from buffer: ByteBuffer) throws -> T where T : Decodable {
-        var buffer = buffer
-        let data = buffer.readData(length: buffer.readableBytes)!
-        return try self.downstream.decode(T.self, from: data)
-    }
-}
-
-struct PostgresJSONEncoderWrapper: PSQLJSONEncoder {
-    let downstream: PostgresJSONEncoder
-    
-    init(_ downstream: PostgresJSONEncoder) {
-        self.downstream = downstream
-    }
-    
-    func encode<T>(_ value: T, into buffer: inout ByteBuffer) throws where T : Encodable {
-        let data = try self.downstream.encode(value)
-        buffer.writeData(data)
-    }
-}
-
-extension PostgresData: PSQLEncodable {
-    var psqlType: PSQLDataType {
-        PSQLDataType(Int32(self.type.rawValue))
-    }
-    
-    var psqlFormat: PSQLFormat {
-        .binary
-    }
-    
-    func encode(into byteBuffer: inout ByteBuffer, context: PSQLEncodingContext) throws {
-        preconditionFailure("Should never be hit, since `encodeRaw` is implemented.")
-    }
-    
-    // encoding
-    func encodeRaw(into byteBuffer: inout ByteBuffer, context: PSQLEncodingContext) throws {
-        switch self.value {
-        case .none:
-            byteBuffer.writeInteger(-1, as: Int32.self)
-        case .some(var input):
-            byteBuffer.writeInteger(Int32(input.readableBytes))
-            byteBuffer.writeBuffer(&input)
-        }
-    }
-}
-
-extension PostgresData: PSQLDecodable {
-    static func decode(from byteBuffer: inout ByteBuffer, type: PSQLDataType, format: PSQLFormat, context: PSQLDecodingContext) throws -> PostgresData {
-        let myBuffer = byteBuffer.readSlice(length: byteBuffer.readableBytes)!
-        
-        return PostgresData(type: PostgresDataType(UInt32(type.rawValue)), typeModifier: nil, formatCode: .binary, value: myBuffer)
-    }
-}
-
-extension PostgresData: PSQLCodable {}
-
 extension PSQLError {
     func toPostgresError() -> Error {
         switch self.base {
@@ -102,8 +40,8 @@ extension PSQLError {
     }
 }
 
-extension PostgresFormatCode {
-    init(psqlFormatCode: PSQLFormat) {
+extension PostgresFormat {
+    init(psqlFormatCode: PostgresFormat) {
         switch psqlFormatCode {
         case .binary:
             self = .binary

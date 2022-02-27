@@ -4,7 +4,7 @@ import NIOCore
 
 class JSON_PSQLCodableTests: XCTestCase {
     
-    struct Hello: Equatable, Codable, PSQLCodable {
+    struct Hello: Equatable, Codable, PostgresCodable {
         let hello: String
         
         init(name: String) {
@@ -15,39 +15,37 @@ class JSON_PSQLCodableTests: XCTestCase {
     func testRoundTrip() {
         var buffer = ByteBuffer()
         let hello = Hello(name: "world")
-        XCTAssertNoThrow(try hello.encode(into: &buffer, context: .forTests()))
+        XCTAssertNoThrow(try hello.encode(into: &buffer, context: .default))
         XCTAssertEqual(hello.psqlType, .jsonb)
         
         // verify jsonb prefix byte
         XCTAssertEqual(buffer.getInteger(at: buffer.readerIndex, as: UInt8.self), 1)
-        
-        let data = PSQLData(bytes: buffer, dataType: .jsonb, format: .binary)
+
         var result: Hello?
-        XCTAssertNoThrow(result = try data.decode(as: Hello.self, context: .forTests()))
+        XCTAssertNoThrow(result = try Hello.decode(from: &buffer, type: .jsonb, format: .binary, context: .default))
         XCTAssertEqual(result, hello)
     }
     
     func testDecodeFromJSON() {
         var buffer = ByteBuffer()
         buffer.writeString(#"{"hello":"world"}"#)
-        
-        let data = PSQLData(bytes: buffer, dataType: .json, format: .binary)
+
         var result: Hello?
-        XCTAssertNoThrow(result = try data.decode(as: Hello.self, context: .forTests()))
+        XCTAssertNoThrow(result = try Hello.decode(from: &buffer, type: .json, format: .binary, context: .default))
         XCTAssertEqual(result, Hello(name: "world"))
     }
     
     func testDecodeFromJSONAsText() {
-        let combinations : [(PSQLFormat, PSQLDataType)] = [
+        let combinations : [(PostgresFormat, PostgresDataType)] = [
             (.text, .json), (.text, .jsonb),
         ]
         var buffer = ByteBuffer()
         buffer.writeString(#"{"hello":"world"}"#)
         
         for (format, dataType) in combinations {
-            let data = PSQLData(bytes: buffer, dataType: dataType, format: format)
+            var loopBuffer = buffer
             var result: Hello?
-            XCTAssertNoThrow(result = try data.decode(as: Hello.self, context: .forTests()))
+            XCTAssertNoThrow(result = try Hello.decode(from: &loopBuffer, type: dataType, format: format, context: .default))
             XCTAssertEqual(result, Hello(name: "world"))
         }
     }
@@ -55,36 +53,38 @@ class JSON_PSQLCodableTests: XCTestCase {
     func testDecodeFromJSONBWithoutVersionPrefixByte() {
         var buffer = ByteBuffer()
         buffer.writeString(#"{"hello":"world"}"#)
-        
-        let data = PSQLData(bytes: buffer, dataType: .jsonb, format: .binary)
-        XCTAssertThrowsError(try data.decode(as: Hello.self, context: .forTests())) { error in
-            XCTAssert(error is PSQLCastingError)
+
+        XCTAssertThrowsError(try Hello.decode(from: &buffer, type: .jsonb, format: .binary, context: .default)) {
+            XCTAssertEqual($0 as? PostgresCastingError.Code, .failure)
         }
     }
     
     func testDecodeFromJSONBWithWrongDataType() {
         var buffer = ByteBuffer()
         buffer.writeString(#"{"hello":"world"}"#)
-        
-        let data = PSQLData(bytes: buffer, dataType: .text, format: .binary)
-        XCTAssertThrowsError(try data.decode(as: Hello.self, context: .forTests())) { error in
-            XCTAssert(error is PSQLCastingError)
+
+        XCTAssertThrowsError(try Hello.decode(from: &buffer, type: .text, format: .binary, context: .default)) {
+            XCTAssertEqual($0 as? PostgresCastingError.Code, .typeMismatch)
         }
     }
     
     func testCustomEncoderIsUsed() {
-        class TestEncoder: PSQLJSONEncoder {
+        class TestEncoder: PostgresJSONEncoder {
             var encodeHits = 0
             
             func encode<T>(_ value: T, into buffer: inout ByteBuffer) throws where T : Encodable {
                 self.encodeHits += 1
+            }
+
+            func encode<T>(_ value: T) throws -> Data where T : Encodable {
+                preconditionFailure()
             }
         }
         
         let hello = Hello(name: "world")
         let encoder = TestEncoder()
         var buffer = ByteBuffer()
-        XCTAssertNoThrow(try hello.encode(into: &buffer, context: .forTests(jsonEncoder: encoder)))
+        XCTAssertNoThrow(try hello.encode(into: &buffer, context: .init(jsonEncoder: encoder)))
         XCTAssertEqual(encoder.encodeHits, 1)
     }
 }

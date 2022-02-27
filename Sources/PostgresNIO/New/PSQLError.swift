@@ -18,7 +18,7 @@ struct PSQLError: Error {
         case connectionError(underlying: Error)
         case uncleanShutdown
         
-        case casting(PSQLCastingError)
+        case casting(PostgresCastingError)
     }
     
     internal var base: Base
@@ -80,59 +80,64 @@ struct PSQLError: Error {
     }
 }
 
-struct PSQLCastingError: Error {
-    
+/// An error that may happen when a ``PostgresRow`` or ``PostgresCell`` is decoded to native Swift types.
+struct PostgresCastingError: Error, Equatable {
+    struct Code: Hashable, Error {
+        enum Base {
+            case missingData
+            case typeMismatch
+            case failure
+        }
+
+        var base: Base
+
+        init(_ base: Base) {
+            self.base = base
+        }
+
+        static let missingData = Self.init(.missingData)
+        static let typeMismatch = Self.init(.typeMismatch)
+        static let failure = Self.init(.failure)
+    }
+
+    /// The casting error code
+    let code: Code
+
+    /// The cell's column name for which the casting failed
     let columnName: String
+    /// The cell's column index for which the casting failed
     let columnIndex: Int
-    
+    /// The swift type the cell should have been casted into
+    let targetType: Any.Type
+    /// The cell's postgres data type for which the casting failed
+    let postgresType: PostgresDataType
+    /// The cell's postgres format for which the casting failed
+    let postgresFormat: PostgresFormat
+    /// A copy of the cell data which was attempted to be casted
+    let postgresData: ByteBuffer?
+
+    /// The file the casting/decoding was attempted in
     let file: String
+    /// The line the casting/decoding was attempted in
     let line: Int
     
-    let targetType: PSQLDecodable.Type
-    let postgresType: PSQLDataType
-    let postgresData: ByteBuffer?
-    
-    let description: String
-    let underlying: Error?
-    
-    static func missingData(targetType: PSQLDecodable.Type, type: PSQLDataType, context: PSQLDecodingContext) -> Self {
-        PSQLCastingError(
-            columnName: context.columnName,
-            columnIndex: context.columnIndex,
-            file: context.file,
-            line: context.line,
-            targetType: targetType,
-            postgresType: type,
-            postgresData: nil,
-            description: """
-                Failed to cast Postgres data type \(type.description) to Swift type \(targetType) \
-                because of missing data in \(context.file) line \(context.line).
-                """,
-            underlying: nil
-        )
+    var description: String {
+        // This may seem very odd... But we are afraid that users might accidentally send the
+        // unfiltered errors out to end-users. This may leak security relevant information. For this
+        // reason we overwrite the error description by default to this generic "Database error"
+        "Database error"
     }
     
-    static func failure(targetType: PSQLDecodable.Type,
-                        type: PSQLDataType,
-                        postgresData: ByteBuffer,
-                        description: String? = nil,
-                        underlying: Error? = nil,
-                        context: PSQLDecodingContext) -> Self
-    {
-        PSQLCastingError(
-            columnName: context.columnName,
-            columnIndex: context.columnIndex,
-            file: context.file,
-            line: context.line,
-            targetType: targetType,
-            postgresType: type,
-            postgresData: postgresData,
-            description: description ?? """
-                Failed to cast Postgres data type \(type.description) to Swift type \(targetType) \
-                in \(context.file) line \(context.line)."
-                """,
-            underlying: underlying
-        )
+    static func ==(lhs: PostgresCastingError, rhs: PostgresCastingError) -> Bool {
+        return lhs.code == rhs.code
+            && lhs.columnName == rhs.columnName
+            && lhs.columnIndex == rhs.columnIndex
+            && lhs.targetType == rhs.targetType
+            && lhs.postgresType == rhs.postgresType
+            && lhs.postgresFormat == rhs.postgresFormat
+            && lhs.postgresData == rhs.postgresData
+            && lhs.file == rhs.file
+            && lhs.line == rhs.line
     }
 }
 

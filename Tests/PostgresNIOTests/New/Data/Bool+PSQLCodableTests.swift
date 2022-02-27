@@ -10,15 +10,14 @@ class Bool_PSQLCodableTests: XCTestCase {
         let value = true
         
         var buffer = ByteBuffer()
-        value.encode(into: &buffer, context: .forTests())
+        value.encode(into: &buffer, context: .default)
         XCTAssertEqual(value.psqlType, .bool)
         XCTAssertEqual(value.psqlFormat, .binary)
         XCTAssertEqual(buffer.readableBytes, 1)
         XCTAssertEqual(buffer.getInteger(at: buffer.readerIndex, as: UInt8.self), 1)
-        let data = PSQLData(bytes: buffer, dataType: .bool, format: .binary)
         
         var result: Bool?
-        XCTAssertNoThrow(result = try data.decode(as: Bool.self, context: .forTests()))
+        XCTAssertNoThrow(result = try Bool.decode(from: &buffer, type: .bool, format: .binary, context: .default))
         XCTAssertEqual(value, result)
     }
     
@@ -26,35 +25,32 @@ class Bool_PSQLCodableTests: XCTestCase {
         let value = false
         
         var buffer = ByteBuffer()
-        value.encode(into: &buffer, context: .forTests())
+        value.encode(into: &buffer, context: .default)
         XCTAssertEqual(value.psqlType, .bool)
         XCTAssertEqual(value.psqlFormat, .binary)
         XCTAssertEqual(buffer.readableBytes, 1)
         XCTAssertEqual(buffer.getInteger(at: buffer.readerIndex, as: UInt8.self), 0)
-        let data = PSQLData(bytes: buffer, dataType: .bool, format: .binary)
-        
+
         var result: Bool?
-        XCTAssertNoThrow(result = try data.decode(as: Bool.self, context: .forTests()))
+        XCTAssertNoThrow(result = try Bool.decode(from: &buffer, type: .bool, format: .binary, context: .default))
         XCTAssertEqual(value, result)
     }
     
     func testBinaryDecodeBoolInvalidLength() {
         var buffer = ByteBuffer()
         buffer.writeInteger(Int64(1))
-        let data = PSQLData(bytes: buffer, dataType: .bool, format: .binary)
-        
-        XCTAssertThrowsError(try data.decode(as: Bool.self, context: .forTests())) { error in
-            XCTAssert(error is PSQLCastingError)
+
+        XCTAssertThrowsError(try Bool.decode(from: &buffer, type: .bool, format: .binary, context: .default)) {
+            XCTAssertEqual($0 as? PostgresCastingError.Code, .failure)
         }
     }
     
     func testBinaryDecodeBoolInvalidValue() {
         var buffer = ByteBuffer()
         buffer.writeInteger(UInt8(13))
-        let data = PSQLData(bytes: buffer, dataType: .bool, format: .binary)
-        
-        XCTAssertThrowsError(try data.decode(as: Bool.self, context: .forTests())) { error in
-            XCTAssert(error is PSQLCastingError)
+
+        XCTAssertThrowsError(try Bool.decode(from: &buffer, type: .bool, format: .binary, context: .default)) {
+            XCTAssertEqual($0 as? PostgresCastingError.Code, .failure)
         }
     }
 
@@ -65,10 +61,9 @@ class Bool_PSQLCodableTests: XCTestCase {
         
         var buffer = ByteBuffer()
         buffer.writeInteger(UInt8(ascii: "t"))
-        let data = PSQLData(bytes: buffer, dataType: .bool, format: .text)
-        
+
         var result: Bool?
-        XCTAssertNoThrow(result = try data.decode(as: Bool.self, context: .forTests()))
+        XCTAssertNoThrow(result = try Bool.decode(from: &buffer, type: .bool, format: .text, context: .default))
         XCTAssertEqual(value, result)
     }
     
@@ -77,20 +72,18 @@ class Bool_PSQLCodableTests: XCTestCase {
         
         var buffer = ByteBuffer()
         buffer.writeInteger(UInt8(ascii: "f"))
-        let data = PSQLData(bytes: buffer, dataType: .bool, format: .text)
-        
+
         var result: Bool?
-        XCTAssertNoThrow(result = try data.decode(as: Bool.self, context: .forTests()))
+        XCTAssertNoThrow(result = try Bool.decode(from: &buffer, type: .bool, format: .text, context: .default))
         XCTAssertEqual(value, result)
     }
     
     func testTextDecodeBoolInvalidValue() {
         var buffer = ByteBuffer()
         buffer.writeInteger(UInt8(13))
-        let data = PSQLData(bytes: buffer, dataType: .bool, format: .text)
-        
-        XCTAssertThrowsError(try data.decode(as: Bool.self, context: .forTests())) { error in
-            XCTAssert(error is PSQLCastingError)
+
+        XCTAssertThrowsError(try Bool.decode(from: &buffer, type: .bool, format: .text, context: .default)) {
+            XCTAssertEqual($0 as? PostgresCastingError.Code, .failure)
         }
     }
 }

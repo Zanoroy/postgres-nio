@@ -20,57 +20,44 @@ enum PSQLTask {
 
 final class ExtendedQueryContext {
     enum Query {
-        case unnamed(String)
-        case preparedStatement(name: String, rowDescription: PSQLBackendMessage.RowDescription?)
+        case unnamed(PostgresQuery)
+        case preparedStatement(PSQLExecuteStatement)
     }
     
     let query: Query
-    let bind: [PSQLEncodable]
     let logger: Logger
-    
-    let jsonDecoder: PSQLJSONDecoder
+
     let promise: EventLoopPromise<PSQLRowStream>
     
-    init(query: String,
-         bind: [PSQLEncodable],
+    init(query: PostgresQuery,
          logger: Logger,
-         jsonDecoder: PSQLJSONDecoder,
          promise: EventLoopPromise<PSQLRowStream>)
     {
         self.query = .unnamed(query)
-        self.bind = bind
         self.logger = logger
-        self.jsonDecoder = jsonDecoder
         self.promise = promise
     }
     
-    init(preparedStatement: PSQLPreparedStatement,
-         bind: [PSQLEncodable],
+    init(executeStatement: PSQLExecuteStatement,
          logger: Logger,
-         jsonDecoder: PSQLJSONDecoder,
          promise: EventLoopPromise<PSQLRowStream>)
     {
-        self.query = .preparedStatement(
-            name: preparedStatement.name,
-            rowDescription: preparedStatement.rowDescription)
-        self.bind = bind
+        self.query = .preparedStatement(executeStatement)
         self.logger = logger
-        self.jsonDecoder = jsonDecoder
         self.promise = promise
     }
-
 }
 
 final class PrepareStatementContext {
     let name: String
     let query: String
     let logger: Logger
-    let promise: EventLoopPromise<PSQLBackendMessage.RowDescription?>
+    let promise: EventLoopPromise<RowDescription?>
     
     init(name: String,
          query: String,
          logger: Logger,
-         promise: EventLoopPromise<PSQLBackendMessage.RowDescription?>)
+         promise: EventLoopPromise<RowDescription?>)
     {
         self.name = name
         self.query = query
@@ -80,7 +67,6 @@ final class PrepareStatementContext {
 }
 
 final class CloseCommandContext {
-    
     let target: CloseTarget
     let logger: Logger
     let promise: EventLoopPromise<Void>
