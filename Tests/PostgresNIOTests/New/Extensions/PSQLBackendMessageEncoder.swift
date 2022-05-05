@@ -2,14 +2,14 @@ import NIOCore
 @testable import PostgresNIO
 
 struct PSQLBackendMessageEncoder: MessageToByteEncoder {
-    typealias OutboundIn = PSQLBackendMessage
+    typealias OutboundIn = PostgresBackendMessage
 
     /// Called once there is data to encode.
     ///
     /// - parameters:
     ///     - data: The data to encode into a `ByteBuffer`.
     ///     - out: The `ByteBuffer` into which we want to encode.
-    func encode(data message: PSQLBackendMessage, out buffer: inout ByteBuffer) throws {
+    func encode(data message: PostgresBackendMessage, out buffer: inout ByteBuffer) throws {
         switch message {
         case .authentication(let authentication):
             self.encode(messageID: message.id, payload: authentication, into: &buffer)
@@ -73,11 +73,11 @@ struct PSQLBackendMessageEncoder: MessageToByteEncoder {
     }
 
     private func encode<Payload: PSQLMessagePayloadEncodable>(
-        messageID: PSQLBackendMessage.ID,
+        messageID: PostgresBackendMessage.ID,
         payload: Payload,
         into buffer: inout ByteBuffer)
     {
-        buffer.writeBackendMessageID(messageID)
+        buffer.psqlWriteBackendMessageID(messageID)
         let startIndex = buffer.writerIndex
         buffer.writeInteger(Int32(0)) // placeholder for length
         payload.encode(into: &buffer)
@@ -86,7 +86,7 @@ struct PSQLBackendMessageEncoder: MessageToByteEncoder {
     }
 }
 
-extension PSQLBackendMessage {
+extension PostgresBackendMessage {
     var id: ID {
         switch self {
         case .authentication:
@@ -130,7 +130,7 @@ extension PSQLBackendMessage {
     }
 }
 
-extension PSQLBackendMessage.Authentication: PSQLMessagePayloadEncodable {
+extension PostgresBackendMessage.Authentication: PSQLMessagePayloadEncodable {
     
     public func encode(into buffer: inout ByteBuffer) {
         switch self {
@@ -181,30 +181,21 @@ extension PSQLBackendMessage.Authentication: PSQLMessagePayloadEncodable {
     
 }
 
-extension PSQLBackendMessage.BackendKeyData: PSQLMessagePayloadEncodable {
+extension PostgresBackendMessage.BackendKeyData: PSQLMessagePayloadEncodable {
     public func encode(into buffer: inout ByteBuffer) {
         buffer.writeInteger(self.processID)
         buffer.writeInteger(self.secretKey)
     }
 }
 
-extension PSQLBackendMessage.DataRow: PSQLMessagePayloadEncodable {
+extension DataRow: PSQLMessagePayloadEncodable {
     public func encode(into buffer: inout ByteBuffer) {
-        buffer.writeInteger(Int16(self.columns.count))
-        
-        for column in self.columns {
-            switch column {
-            case .none:
-                buffer.writeInteger(-1, as: Int32.self)
-            case .some(var writable):
-                buffer.writeInteger(Int32(writable.readableBytes))
-                buffer.writeBuffer(&writable)
-            }
-        }
+        buffer.writeInteger(self.columnCount, as: Int16.self)
+        buffer.writeBytes(self.bytes.readableBytesView)
     }
 }
 
-extension PSQLBackendMessage.ErrorResponse: PSQLMessagePayloadEncodable {
+extension PostgresBackendMessage.ErrorResponse: PSQLMessagePayloadEncodable {
     public func encode(into buffer: inout ByteBuffer) {
         for (key, value) in self.fields {
             buffer.writeInteger(key.rawValue, as: UInt8.self)
@@ -214,7 +205,7 @@ extension PSQLBackendMessage.ErrorResponse: PSQLMessagePayloadEncodable {
     }
 }
 
-extension PSQLBackendMessage.NoticeResponse: PSQLMessagePayloadEncodable {
+extension PostgresBackendMessage.NoticeResponse: PSQLMessagePayloadEncodable {
     public func encode(into buffer: inout ByteBuffer) {
         for (key, value) in self.fields {
             buffer.writeInteger(key.rawValue, as: UInt8.self)
@@ -224,7 +215,7 @@ extension PSQLBackendMessage.NoticeResponse: PSQLMessagePayloadEncodable {
     }
 }
 
-extension PSQLBackendMessage.NotificationResponse: PSQLMessagePayloadEncodable {
+extension PostgresBackendMessage.NotificationResponse: PSQLMessagePayloadEncodable {
     public func encode(into buffer: inout ByteBuffer) {
         buffer.writeInteger(self.backendPID)
         buffer.writeNullTerminatedString(self.channel)
@@ -232,7 +223,7 @@ extension PSQLBackendMessage.NotificationResponse: PSQLMessagePayloadEncodable {
     }
 }
 
-extension PSQLBackendMessage.ParameterDescription: PSQLMessagePayloadEncodable {
+extension PostgresBackendMessage.ParameterDescription: PSQLMessagePayloadEncodable {
     public func encode(into buffer: inout ByteBuffer) {
         buffer.writeInteger(Int16(self.dataTypes.count))
         
@@ -242,20 +233,20 @@ extension PSQLBackendMessage.ParameterDescription: PSQLMessagePayloadEncodable {
     }
 }
 
-extension PSQLBackendMessage.ParameterStatus: PSQLMessagePayloadEncodable {
+extension PostgresBackendMessage.ParameterStatus: PSQLMessagePayloadEncodable {
     public func encode(into buffer: inout ByteBuffer) {
         buffer.writeNullTerminatedString(self.parameter)
         buffer.writeNullTerminatedString(self.value)
     }
 }
 
-extension PSQLBackendMessage.TransactionState: PSQLMessagePayloadEncodable {
+extension PostgresBackendMessage.TransactionState: PSQLMessagePayloadEncodable {
     public func encode(into buffer: inout ByteBuffer) {
         buffer.writeInteger(self.rawValue)
     }
 }
 
-extension PSQLBackendMessage.RowDescription: PSQLMessagePayloadEncodable {
+extension RowDescription: PSQLMessagePayloadEncodable {
     public func encode(into buffer: inout ByteBuffer) {
         buffer.writeInteger(Int16(self.columns.count))
         

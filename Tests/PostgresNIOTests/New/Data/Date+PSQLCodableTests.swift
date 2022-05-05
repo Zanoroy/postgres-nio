@@ -3,96 +3,87 @@ import NIOCore
 @testable import PostgresNIO
 
 class Date_PSQLCodableTests: XCTestCase {
-    
+
     func testNowRoundTrip() {
         let value = Date()
-        
+
         var buffer = ByteBuffer()
-        value.encode(into: &buffer, context: .forTests())
-        XCTAssertEqual(value.psqlType, .timestamptz)
+        value.encode(into: &buffer, context: .default)
+        XCTAssertEqual(Date.psqlType, .timestamptz)
         XCTAssertEqual(buffer.readableBytes, 8)
-        let data = PSQLData(bytes: buffer, dataType: .timestamptz, format: .binary)
-        
+
         var result: Date?
-        XCTAssertNoThrow(result = try data.decode(as: Date.self, context: .forTests()))
+        XCTAssertNoThrow(result = try Date(from: &buffer, type: .timestamptz, format: .binary, context: .default))
         XCTAssertEqual(value, result)
     }
-    
+
     func testDecodeRandomDate() {
         var buffer = ByteBuffer()
         buffer.writeInteger(Int64.random(in: Int64.min...Int64.max))
-        let data = PSQLData(bytes: buffer, dataType: .timestamptz, format: .binary)
-        
+
         var result: Date?
-        XCTAssertNoThrow(result = try data.decode(as: Date.self, context: .forTests()))
+        XCTAssertNoThrow(result = try Date(from: &buffer, type: .timestamptz, format: .binary, context: .default))
         XCTAssertNotNil(result)
     }
-    
+
     func testDecodeFailureInvalidLength() {
         var buffer = ByteBuffer()
         buffer.writeInteger(Int64.random(in: Int64.min...Int64.max))
         buffer.writeInteger(Int64.random(in: Int64.min...Int64.max))
-        let data = PSQLData(bytes: buffer, dataType: .timestamptz, format: .binary)
-        
-        XCTAssertThrowsError(try data.decode(as: Date.self, context: .forTests())) { error in
-            XCTAssert(error is PSQLCastingError)
+
+        XCTAssertThrowsError(try Date(from: &buffer, type: .timestamptz, format: .binary, context: .default)) {
+            XCTAssertEqual($0 as? PostgresDecodingError.Code, .failure)
         }
     }
-    
+
     func testDecodeDate() {
         var firstDateBuffer = ByteBuffer()
         firstDateBuffer.writeInteger(Int32.min)
-        let firstDateData = PSQLData(bytes: firstDateBuffer, dataType: .date, format: .binary)
-        
+
         var firstDate: Date?
-        XCTAssertNoThrow(firstDate = try firstDateData.decode(as: Date.self, context: .forTests()))
+        XCTAssertNoThrow(firstDate = try Date(from: &firstDateBuffer, type: .date, format: .binary, context: .default))
         XCTAssertNotNil(firstDate)
-        
+
         var lastDateBuffer = ByteBuffer()
         lastDateBuffer.writeInteger(Int32.max)
-        let lastDateData = PSQLData(bytes: lastDateBuffer, dataType: .date, format: .binary)
-        
+
         var lastDate: Date?
-        XCTAssertNoThrow(lastDate = try lastDateData.decode(as: Date.self, context: .forTests()))
+        XCTAssertNoThrow(lastDate = try Date(from: &lastDateBuffer, type: .date, format: .binary, context: .default))
         XCTAssertNotNil(lastDate)
     }
-    
+
     func testDecodeDateFromTimestamp() {
         var firstDateBuffer = ByteBuffer()
         firstDateBuffer.writeInteger(Int32.min)
-        let firstDateData = PSQLData(bytes: firstDateBuffer, dataType: .date, format: .binary)
-        
+
         var firstDate: Date?
-        XCTAssertNoThrow(firstDate = try firstDateData.decode(as: Date.self, context: .forTests()))
+        XCTAssertNoThrow(firstDate = try Date(from: &firstDateBuffer, type: .date, format: .binary, context: .default))
         XCTAssertNotNil(firstDate)
-        
+
         var lastDateBuffer = ByteBuffer()
         lastDateBuffer.writeInteger(Int32.max)
-        let lastDateData = PSQLData(bytes: lastDateBuffer, dataType: .date, format: .binary)
-        
+
         var lastDate: Date?
-        XCTAssertNoThrow(lastDate = try lastDateData.decode(as: Date.self, context: .forTests()))
+        XCTAssertNoThrow(lastDate = try Date(from: &lastDateBuffer, type: .date, format: .binary, context: .default))
         XCTAssertNotNil(lastDate)
     }
-    
+
     func testDecodeDateFailsWithToMuchData() {
         var buffer = ByteBuffer()
         buffer.writeInteger(Int64(0))
-        let data = PSQLData(bytes: buffer, dataType: .date, format: .binary)
-        
-        XCTAssertThrowsError(try data.decode(as: Date.self, context: .forTests())) { error in
-            XCTAssert(error is PSQLCastingError)
+
+        XCTAssertThrowsError(try Date(from: &buffer, type: .date, format: .binary, context: .default)) {
+            XCTAssertEqual($0 as? PostgresDecodingError.Code, .failure)
         }
     }
-    
+
     func testDecodeDateFailsWithWrongDataType() {
         var buffer = ByteBuffer()
         buffer.writeInteger(Int64(0))
-        let data = PSQLData(bytes: buffer, dataType: .int8, format: .binary)
-        
-        XCTAssertThrowsError(try data.decode(as: Date.self, context: .forTests())) { error in
-            XCTAssert(error is PSQLCastingError)
+
+        XCTAssertThrowsError(try Date(from: &buffer, type: .int8, format: .binary, context: .default)) {
+            XCTAssertEqual($0 as? PostgresDecodingError.Code, .typeMismatch)
         }
     }
-    
+
 }

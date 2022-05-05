@@ -1,6 +1,6 @@
 import NIOCore
 
-extension PSQLFrontendMessage {
+extension PostgresFrontendMessage {
     struct Startup: PSQLMessagePayloadEncodable, Equatable {
 
         /// Creates a `Startup` with "3.0" as the protocol version.
@@ -52,19 +52,16 @@ extension PSQLFrontendMessage {
         func encode(into buffer: inout ByteBuffer) {
             buffer.writeInteger(self.protocolVersion)
             buffer.writeNullTerminatedString("user")
-            buffer.writeString(self.parameters.user)
-            buffer.writeInteger(UInt8(0))
+            buffer.writeNullTerminatedString(self.parameters.user)
             
             if let database = self.parameters.database {
                 buffer.writeNullTerminatedString("database")
-                buffer.writeString(database)
-                buffer.writeInteger(UInt8(0))
+                buffer.writeNullTerminatedString(database)
             }
             
             if let options = self.parameters.options {
                 buffer.writeNullTerminatedString("options")
-                buffer.writeString(options)
-                buffer.writeInteger(UInt8(0))
+                buffer.writeNullTerminatedString(options)
             }
             
             switch self.parameters.replication {

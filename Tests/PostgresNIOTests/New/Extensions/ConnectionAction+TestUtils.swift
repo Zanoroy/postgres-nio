@@ -21,43 +21,8 @@ extension ConnectionStateMachine.ConnectionAction: Equatable {
             return lhs == rhs
         case (.sendPasswordMessage(let lhsMethod, let lhsAuthContext), sendPasswordMessage(let rhsMethod, let rhsAuthContext)):
             return lhsMethod == rhsMethod && lhsAuthContext == rhsAuthContext
-        case (.sendParseDescribeBindExecuteSync(let lquery, let lbinds), sendParseDescribeBindExecuteSync(let rquery, let rbinds)):
-            guard lquery == rquery else {
-                return false
-            }
-
-            guard lbinds.count == rbinds.count else {
-                return false
-            }
-
-            var lhsIterator = lbinds.makeIterator()
-            var rhsIterator = rbinds.makeIterator()
-
-            for _ in 0..<lbinds.count {
-                let lhs = lhsIterator.next()!
-                let rhs = rhsIterator.next()!
-
-                guard lhs.psqlType == rhs.psqlType else {
-                    return false
-                }
-                
-                var lhsbuffer = ByteBuffer()
-                var rhsbuffer = ByteBuffer()
-                let encodingContext = PSQLEncodingContext(jsonEncoder: JSONEncoder())
-                
-                do {
-                    try lhs.encodeRaw(into: &lhsbuffer, context: encodingContext)
-                    try rhs.encodeRaw(into: &rhsbuffer, context: encodingContext)
-                } catch {
-                    return false
-                }
-                
-                guard lhsbuffer == rhsbuffer else {
-                    return false
-                }
-            }
-            
-            return true
+        case (.sendParseDescribeBindExecuteSync(let lquery), sendParseDescribeBindExecuteSync(let rquery)):
+            return lquery == rquery
         case (.fireEventReadyForQuery, .fireEventReadyForQuery):
             return true
         
@@ -67,10 +32,12 @@ extension ConnectionStateMachine.ConnectionAction: Equatable {
             return lhsContext === rhsContext && lhsRowDescription == rhsRowDescription
         case (.failQuery(let lhsContext, let lhsError, let lhsCleanupContext), .failQuery(let rhsContext, let rhsError, let rhsCleanupContext)):
             return lhsContext === rhsContext && lhsError == rhsError && lhsCleanupContext == rhsCleanupContext
-        case (.forwardRow(let lhsColumns, let lhsPromise), .forwardRow(let rhsColumns, let rhsPromise)):
-            return lhsColumns == rhsColumns && lhsPromise.futureResult === rhsPromise.futureResult
-        case (.forwardStreamCompletedToCurrentQuery(let lhsBuffer, let lhsCommandTag, let lhsRead), .forwardStreamCompletedToCurrentQuery(let rhsBuffer, let rhsCommandTag, let rhsRead)):
-            return lhsBuffer == rhsBuffer && lhsCommandTag == rhsCommandTag && lhsRead == rhsRead
+        case (.forwardRows(let lhsRows), .forwardRows(let rhsRows)):
+            return lhsRows == rhsRows
+        case (.forwardStreamComplete(let lhsBuffer, let lhsCommandTag), .forwardStreamComplete(let rhsBuffer, let rhsCommandTag)):
+            return lhsBuffer == rhsBuffer && lhsCommandTag == rhsCommandTag
+        case (.forwardStreamError(let lhsError, let lhsRead, let lhsCleanupContext), .forwardStreamError(let rhsError , let rhsRead, let rhsCleanupContext)):
+            return lhsError == rhsError && lhsRead == rhsRead && lhsCleanupContext == rhsCleanupContext
         case (.sendParseDescribeSync(let lhsName, let lhsQuery), .sendParseDescribeSync(let rhsName, let rhsQuery)):
             return lhsName == rhsName && lhsQuery == rhsQuery
         case (.succeedPreparedStatementCreation(let lhsContext, let lhsRowDescription), .succeedPreparedStatementCreation(let rhsContext, let rhsRowDescription)):
@@ -102,12 +69,12 @@ extension ConnectionStateMachine.ConnectionAction.CleanUpContext: Equatable {
 }
 
 extension ConnectionStateMachine {
-    static func readyForQuery(transactionState: PSQLBackendMessage.TransactionState = .idle) -> Self {
+    static func readyForQuery(transactionState: PostgresBackendMessage.TransactionState = .idle) -> Self {
         let connectionContext = Self.createConnectionContext(transactionState: transactionState)
         return ConnectionStateMachine(.readyForQuery(connectionContext))
     }
     
-    static func createConnectionContext(transactionState: PSQLBackendMessage.TransactionState = .idle) -> ConnectionContext {
+    static func createConnectionContext(transactionState: PostgresBackendMessage.TransactionState = .idle) -> ConnectionContext {
         let paramaters = [
             "DateStyle": "ISO, MDY",
             "application_name": "",
@@ -126,7 +93,8 @@ extension ConnectionStateMachine {
             processID: 2730,
             secretKey: 882037977,
             parameters: paramaters,
-            transactionState: transactionState)
+            transactionState: transactionState
+        )
     }
 }
 

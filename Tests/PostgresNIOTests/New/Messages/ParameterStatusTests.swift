@@ -8,7 +8,7 @@ class ParameterStatusTests: XCTestCase {
     func testDecode() {
         var buffer = ByteBuffer()
         
-        let expected: [PSQLBackendMessage] = [
+        let expected: [PostgresBackendMessage] = [
             .parameterStatus(.init(parameter: "DateStyle", value: "ISO, MDY")),
             .parameterStatus(.init(parameter: "application_name", value: "")),
             .parameterStatus(.init(parameter: "server_encoding", value: "UTF8")),
@@ -42,7 +42,7 @@ class ParameterStatusTests: XCTestCase {
         
         XCTAssertNoThrow(try ByteToMessageDecoderVerifier.verifyDecoder(
             inputOutputPairs: [(buffer, expected)],
-            decoderFactory: { PSQLBackendMessageDecoder(hasAlreadyReceivedBytes: true) }))
+            decoderFactory: { PostgresBackendMessageDecoder(hasAlreadyReceivedBytes: true) }))
     }
     
     func testDecodeFailureBecauseOfMissingNullTermination() {
@@ -54,7 +54,7 @@ class ParameterStatusTests: XCTestCase {
         
         XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(
             inputOutputPairs: [(buffer, [])],
-            decoderFactory: { PSQLBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
+            decoderFactory: { PostgresBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
             XCTAssert($0 is PSQLDecodingError)
         }
     }
@@ -68,7 +68,7 @@ class ParameterStatusTests: XCTestCase {
         
         XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(
             inputOutputPairs: [(buffer, [])],
-            decoderFactory: { PSQLBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
+            decoderFactory: { PostgresBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
             XCTAssert($0 is PSQLDecodingError)
         }
     }

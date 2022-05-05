@@ -6,7 +6,7 @@ import NIOTestUtils
 class ParameterDescriptionTests: XCTestCase {
     
     func testDecode() {
-        let expected: [PSQLBackendMessage] = [
+        let expected: [PostgresBackendMessage] = [
             .parameterDescription(.init(dataTypes: [.bool, .varchar, .uuid, .json, .jsonbArray])),
         ]
         
@@ -27,11 +27,11 @@ class ParameterDescriptionTests: XCTestCase {
         
         XCTAssertNoThrow(try ByteToMessageDecoderVerifier.verifyDecoder(
             inputOutputPairs: [(buffer, expected)],
-            decoderFactory: { PSQLBackendMessageDecoder(hasAlreadyReceivedBytes: true) }))
+            decoderFactory: { PostgresBackendMessageDecoder(hasAlreadyReceivedBytes: true) }))
     }
     
     func testDecodeWithNegativeCount() {
-        let dataTypes: [PSQLDataType] = [.bool, .varchar, .uuid, .json, .jsonbArray]
+        let dataTypes: [PostgresDataType] = [.bool, .varchar, .uuid, .json, .jsonbArray]
         var buffer = ByteBuffer()
         buffer.writeBackendMessage(id: .parameterDescription) { buffer in
             buffer.writeInteger(Int16(-4))
@@ -43,13 +43,13 @@ class ParameterDescriptionTests: XCTestCase {
         
         XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(
             inputOutputPairs: [(buffer, [])],
-            decoderFactory: { PSQLBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
+            decoderFactory: { PostgresBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
             XCTAssert($0 is PSQLDecodingError)
         }
     }
     
     func testDecodeColumnCountDoesntMatchMessageLength() {
-        let dataTypes: [PSQLDataType] = [.bool, .varchar, .uuid, .json, .jsonbArray]
+        let dataTypes: [PostgresDataType] = [.bool, .varchar, .uuid, .json, .jsonbArray]
         var buffer = ByteBuffer()
         buffer.writeBackendMessage(id: .parameterDescription) { buffer in
             // means three columns comming, but 5 are in the buffer actually.
@@ -62,7 +62,7 @@ class ParameterDescriptionTests: XCTestCase {
         
         XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(
             inputOutputPairs: [(buffer, [])],
-            decoderFactory: { PSQLBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
+            decoderFactory: { PostgresBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
             XCTAssert($0 is PSQLDecodingError)
         }
     }

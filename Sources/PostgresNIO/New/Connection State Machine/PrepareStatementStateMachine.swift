@@ -15,7 +15,7 @@ struct PrepareStatementStateMachine {
     
     enum Action {
         case sendParseDescribeSync(name: String, query: String)
-        case succeedPreparedStatementCreation(PrepareStatementContext, with: PSQLBackendMessage.RowDescription?)
+        case succeedPreparedStatementCreation(PrepareStatementContext, with: RowDescription?)
         case failPreparedStatementCreation(PrepareStatementContext, with: PSQLError)
 
         case read
@@ -54,7 +54,7 @@ struct PrepareStatementStateMachine {
         return .wait
     }
     
-    mutating func parameterDescriptionReceived(_ parameterDescription: PSQLBackendMessage.ParameterDescription) -> Action {
+    mutating func parameterDescriptionReceived(_ parameterDescription: PostgresBackendMessage.ParameterDescription) -> Action {
         guard case .parseCompleteReceived(let createContext) = self.state else {
             return self.setAndFireError(.unexpectedBackendMessage(.parameterDescription(parameterDescription)))
         }
@@ -72,7 +72,7 @@ struct PrepareStatementStateMachine {
         return .succeedPreparedStatementCreation(queryContext, with: nil)
     }
     
-    mutating func rowDescriptionReceived(_ rowDescription: PSQLBackendMessage.RowDescription) -> Action {
+    mutating func rowDescriptionReceived(_ rowDescription: RowDescription) -> Action {
         guard case .parameterDescriptionReceived(let queryContext) = self.state else {
             return self.setAndFireError(.unexpectedBackendMessage(.rowDescription(rowDescription)))
         }
@@ -81,7 +81,7 @@ struct PrepareStatementStateMachine {
         return .succeedPreparedStatementCreation(queryContext, with: rowDescription)
     }
     
-    mutating func errorReceived(_ errorMessage: PSQLBackendMessage.ErrorResponse) -> Action {
+    mutating func errorReceived(_ errorMessage: PostgresBackendMessage.ErrorResponse) -> Action {
         let error = PSQLError.server(errorMessage)
         switch self.state {
         case .initialized:

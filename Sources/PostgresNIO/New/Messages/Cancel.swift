@@ -1,6 +1,6 @@
 import NIOCore
 
-extension PSQLFrontendMessage {
+extension PostgresFrontendMessage {
     
     struct Cancel: PSQLMessagePayloadEncodable, Equatable {
         /// The cancel request code. The value is chosen to contain 1234 in the most significant 16 bits,
@@ -15,9 +15,7 @@ extension PSQLFrontendMessage {
         let secretKey: Int32
         
         func encode(into buffer: inout ByteBuffer) {
-            buffer.writeInteger(self.cancelRequestCode)
-            buffer.writeInteger(self.processID)
-            buffer.writeInteger(self.secretKey)
+            buffer.writeMultipleIntegers(self.cancelRequestCode, self.processID, self.secretKey)
         }
     }
 }

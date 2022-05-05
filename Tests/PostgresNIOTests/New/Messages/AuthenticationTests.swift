@@ -6,7 +6,7 @@ import NIOTestUtils
 class AuthenticationTests: XCTestCase {
     
     func testDecodeAuthentication() {
-        var expected = [PSQLBackendMessage]()
+        var expected = [PostgresBackendMessage]()
         var buffer = ByteBuffer()
         let encoder = PSQLBackendMessageEncoder()
         
@@ -40,6 +40,6 @@ class AuthenticationTests: XCTestCase {
         
         XCTAssertNoThrow(try ByteToMessageDecoderVerifier.verifyDecoder(
             inputOutputPairs: [(buffer, expected)],
-            decoderFactory: { PSQLBackendMessageDecoder(hasAlreadyReceivedBytes: false) }))
+            decoderFactory: { PostgresBackendMessageDecoder(hasAlreadyReceivedBytes: false) }))
     }
 }

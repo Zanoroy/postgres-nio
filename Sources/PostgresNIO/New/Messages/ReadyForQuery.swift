@@ -1,6 +1,6 @@
 import NIOCore
 
-extension PSQLBackendMessage {
+extension PostgresBackendMessage {
     enum TransactionState: PayloadDecodable, RawRepresentable {
         typealias RawValue = UInt8
         
@@ -33,10 +33,7 @@ extension PSQLBackendMessage {
         }
         
         static func decode(from buffer: inout ByteBuffer) throws -> Self {
-            try buffer.ensureExactNBytesRemaining(1)
-            
-            // Exactly one byte is readable. For this reason, we can force unwrap the UInt8 below
-            let value = buffer.readInteger(as: UInt8.self)!
+            let value = try buffer.throwingReadInteger(as: UInt8.self)
             guard let state = Self.init(rawValue: value) else {
                 throw PSQLPartialDecodingError.valueNotRawRepresentable(value: value, asType: TransactionState.self)
             }
@@ -46,7 +43,7 @@ extension PSQLBackendMessage {
     }
 }
 
-extension PSQLBackendMessage.TransactionState: CustomDebugStringConvertible {
+extension PostgresBackendMessage.TransactionState: CustomDebugStringConvertible {
     var debugDescription: String {
         switch self {
         case .idle:

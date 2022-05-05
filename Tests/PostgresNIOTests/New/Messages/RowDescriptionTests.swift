@@ -6,12 +6,12 @@ import NIOTestUtils
 class RowDescriptionTests: XCTestCase {
     
     func testDecode() {
-        let columns: [PSQLBackendMessage.RowDescription.Column] = [
+        let columns: [RowDescription.Column] = [
             .init(name: "First", tableOID: 123, columnAttributeNumber: 123, dataType: .bool, dataTypeSize: 2, dataTypeModifier: 8, format: .binary),
             .init(name: "Second", tableOID: 123, columnAttributeNumber: 456, dataType: .uuidArray, dataTypeSize: 567, dataTypeModifier: 123, format: .text),
         ]
         
-        let expected: [PSQLBackendMessage] = [
+        let expected: [PostgresBackendMessage] = [
             .rowDescription(.init(columns: columns))
         ]
         
@@ -38,11 +38,11 @@ class RowDescriptionTests: XCTestCase {
         
         XCTAssertNoThrow(try ByteToMessageDecoderVerifier.verifyDecoder(
             inputOutputPairs: [(buffer, expected)],
-            decoderFactory: { PSQLBackendMessageDecoder(hasAlreadyReceivedBytes: true) }))
+            decoderFactory: { PostgresBackendMessageDecoder(hasAlreadyReceivedBytes: true) }))
     }
     
     func testDecodeFailureBecauseOfMissingNullTerminationInColumnName() {
-        let column = PSQLBackendMessage.RowDescription.Column(
+        let column = RowDescription.Column(
             name: "First", tableOID: 123, columnAttributeNumber: 123, dataType: .bool, dataTypeSize: 2, dataTypeModifier: 8, format: .binary)
         
         var buffer = ByteBuffer()
@@ -59,13 +59,13 @@ class RowDescriptionTests: XCTestCase {
         
         XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(
             inputOutputPairs: [(buffer, [])],
-            decoderFactory: { PSQLBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
+            decoderFactory: { PostgresBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
             XCTAssert($0 is PSQLDecodingError)
         }
     }
     
     func testDecodeFailureBecauseOfMissingColumnCount() {
-        let column = PSQLBackendMessage.RowDescription.Column(
+        let column = RowDescription.Column(
             name: "First", tableOID: 123, columnAttributeNumber: 123, dataType: .bool, dataTypeSize: 2, dataTypeModifier: 8, format: .binary)
         
         var buffer = ByteBuffer()
@@ -81,13 +81,13 @@ class RowDescriptionTests: XCTestCase {
         
         XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(
             inputOutputPairs: [(buffer, [])],
-            decoderFactory: { PSQLBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
+            decoderFactory: { PostgresBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
             XCTAssert($0 is PSQLDecodingError)
         }
     }
     
     func testDecodeFailureBecauseInvalidFormatCode() {
-        let column = PSQLBackendMessage.RowDescription.Column(
+        let column = RowDescription.Column(
             name: "First", tableOID: 123, columnAttributeNumber: 123, dataType: .bool, dataTypeSize: 2, dataTypeModifier: 8, format: .binary)
         
         var buffer = ByteBuffer()
@@ -104,13 +104,13 @@ class RowDescriptionTests: XCTestCase {
         
         XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(
             inputOutputPairs: [(buffer, [])],
-            decoderFactory: { PSQLBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
+            decoderFactory: { PostgresBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
             XCTAssert($0 is PSQLDecodingError)
         }
     }
     
     func testDecodeFailureBecauseNegativeColumnCount() {
-        let column = PSQLBackendMessage.RowDescription.Column(
+        let column = RowDescription.Column(
             name: "First", tableOID: 123, columnAttributeNumber: 123, dataType: .bool, dataTypeSize: 2, dataTypeModifier: 8, format: .binary)
         
         var buffer = ByteBuffer()
@@ -127,7 +127,7 @@ class RowDescriptionTests: XCTestCase {
         
         XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(
             inputOutputPairs: [(buffer, [])],
-            decoderFactory: { PSQLBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
+            decoderFactory: { PostgresBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
             XCTAssert($0 is PSQLDecodingError)
         }
     }

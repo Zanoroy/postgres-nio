@@ -5,14 +5,17 @@ import NIOCore
 class BindTests: XCTestCase {
     
     func testEncodeBind() {
-        let encoder = PSQLFrontendMessageEncoder.forTests
+        let encoder = PSQLFrontendMessageEncoder()
+        var bindings = PostgresBindings()
+        XCTAssertNoThrow(try bindings.append("Hello", context: .default))
+        XCTAssertNoThrow(try bindings.append("World", context: .default))
         var byteBuffer = ByteBuffer()
-        let bind = PSQLFrontendMessage.Bind(portalName: "", preparedStatementName: "", parameters: ["Hello", "World"])
-        let message = PSQLFrontendMessage.bind(bind)
-        XCTAssertNoThrow(try encoder.encode(data: message, out: &byteBuffer))
+        let bind = PostgresFrontendMessage.Bind(portalName: "", preparedStatementName: "", bind: bindings)
+        let message = PostgresFrontendMessage.bind(bind)
+        encoder.encode(data: message, out: &byteBuffer)
         
         XCTAssertEqual(byteBuffer.readableBytes, 37)
-        XCTAssertEqual(PSQLFrontendMessage.ID.bind.rawValue, byteBuffer.readInteger(as: UInt8.self))
+        XCTAssertEqual(PostgresFrontendMessage.ID.bind.rawValue, byteBuffer.readInteger(as: UInt8.self))
         XCTAssertEqual(byteBuffer.readInteger(as: Int32.self), 36)
         XCTAssertEqual("", byteBuffer.readNullTerminatedString())
         XCTAssertEqual("", byteBuffer.readNullTerminatedString())

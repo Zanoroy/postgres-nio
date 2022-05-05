@@ -6,7 +6,7 @@ import NIOTestUtils
 class NotificationResponseTests: XCTestCase {
     
     func testDecode() {
-        let expected: [PSQLBackendMessage] = [
+        let expected: [PostgresBackendMessage] = [
             .notification(.init(backendPID: 123, channel: "test", payload: "hello")),
             .notification(.init(backendPID: 123, channel: "test", payload: "world")),
             .notification(.init(backendPID: 123, channel: "foo", payload: "bar"))
@@ -27,7 +27,7 @@ class NotificationResponseTests: XCTestCase {
         
         XCTAssertNoThrow(try ByteToMessageDecoderVerifier.verifyDecoder(
             inputOutputPairs: [(buffer, expected)],
-            decoderFactory: { PSQLBackendMessageDecoder(hasAlreadyReceivedBytes: true) }))
+            decoderFactory: { PostgresBackendMessageDecoder(hasAlreadyReceivedBytes: true) }))
     }
     
     func testDecodeFailureBecauseOfMissingNullTermination() {
@@ -40,7 +40,7 @@ class NotificationResponseTests: XCTestCase {
         
         XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(
             inputOutputPairs: [(buffer, [])],
-            decoderFactory: { PSQLBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
+            decoderFactory: { PostgresBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
             XCTAssert($0 is PSQLDecodingError)
         }
     }
@@ -55,7 +55,7 @@ class NotificationResponseTests: XCTestCase {
         
         XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(
             inputOutputPairs: [(buffer, [])],
-            decoderFactory: { PSQLBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
+            decoderFactory: { PostgresBackendMessageDecoder(hasAlreadyReceivedBytes: true) })) {
             XCTAssert($0 is PSQLDecodingError)
         }
     }

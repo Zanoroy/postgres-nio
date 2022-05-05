@@ -3,51 +3,44 @@ import NIOCore
 @testable import PostgresNIO
 
 class RawRepresentable_PSQLCodableTests: XCTestCase {
-    
-    enum MyRawRepresentable: Int16, PSQLCodable {
+
+    enum MyRawRepresentable: Int16, PostgresCodable {
         case testing = 1
         case staging = 2
         case production = 3
     }
-    
+
     func testRoundTrip() {
         let values: [MyRawRepresentable] = [.testing, .staging, .production]
-        
+
         for value in values {
             var buffer = ByteBuffer()
-            XCTAssertNoThrow(try value.encode(into: &buffer, context: .forTests()))
-            XCTAssertEqual(value.psqlType, Int16.psqlArrayElementType)
+            XCTAssertNoThrow(try value.encode(into: &buffer, context: .default))
+            XCTAssertEqual(MyRawRepresentable.psqlType, Int16.psqlType)
             XCTAssertEqual(buffer.readableBytes, 2)
-            let data = PSQLData(bytes: buffer, dataType: Int16.psqlArrayElementType, format: .binary)
-            
+
             var result: MyRawRepresentable?
-            XCTAssertNoThrow(result = try data.decode(as: MyRawRepresentable.self, context: .forTests()))
+            XCTAssertNoThrow(result = try MyRawRepresentable(from: &buffer, type: Int16.psqlType, format: .binary, context: .default))
             XCTAssertEqual(value, result)
         }
     }
-    
+
     func testDecodeInvalidRawTypeValue() {
         var buffer = ByteBuffer()
         buffer.writeInteger(Int16(4)) // out of bounds
-        let data = PSQLData(bytes: buffer, dataType: Int16.psqlArrayElementType, format: .binary)
-        
-        XCTAssertThrowsError(try data.decode(as: MyRawRepresentable.self, context: .forTests())) { error in
-            XCTAssertEqual((error as? PSQLCastingError)?.line, #line - 1)
-            XCTAssertEqual((error as? PSQLCastingError)?.file, #file)
-            XCTAssert((error as? PSQLCastingError)?.targetType == MyRawRepresentable.self)
+
+        XCTAssertThrowsError(try MyRawRepresentable(from: &buffer, type: Int16.psqlType, format: .binary, context: .default)) {
+            XCTAssertEqual($0 as? PostgresDecodingError.Code, .failure)
         }
     }
-    
+
     func testDecodeInvalidUnderlyingTypeValue() {
         var buffer = ByteBuffer()
         buffer.writeInteger(Int32(1)) // out of bounds
-        let data = PSQLData(bytes: buffer, dataType: Int32.psqlArrayElementType, format: .binary)
-        
-        XCTAssertThrowsError(try data.decode(as: MyRawRepresentable.self, context: .forTests())) { error in
-            XCTAssertEqual((error as? PSQLCastingError)?.line, #line - 1)
-            XCTAssertEqual((error as? PSQLCastingError)?.file, #file)
-            XCTAssert((error as? PSQLCastingError)?.targetType == MyRawRepresentable.self)
+
+        XCTAssertThrowsError(try MyRawRepresentable(from: &buffer, type: Int32.psqlType, format: .binary, context: .default)) {
+            XCTAssertEqual($0 as? PostgresDecodingError.Code, .failure)
         }
     }
-    
+
 }
