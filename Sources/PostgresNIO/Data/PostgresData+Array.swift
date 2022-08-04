@@ -13,7 +13,7 @@ extension PostgresData {
         var buffer = ByteBufferAllocator().buffer(capacity: 0)
         // 0 if empty, 1 if not
         buffer.writeInteger(array.isEmpty ? 0 : 1, as: UInt32.self)
-      
+
         var nilEntry = false
         for item in array {
           if (item == nil || item!.value == nil) {
@@ -21,7 +21,7 @@ extension PostgresData {
             break
           }
         }
-        
+
         // b
         // if we have ANY elements that have are nil then b == 1
         if(nilEntry){
@@ -30,7 +30,7 @@ extension PostgresData {
           buffer.writeInteger(0, as: UInt32.self)
         }
 
-      
+
       // array element type
         buffer.writeInteger(elementType.rawValue)
 
@@ -133,27 +133,24 @@ extension PostgresData {
             let iLength = value.readInteger(as: UInt32.self)
             if(iLength == 4294967295)
             {
-              let iValue = ByteBuffer(staticString: "|NULL|") // This is a shit way to do this, but the LEAF module would need changing too
-              
-              if (type == 25) { // text
+              if (type == .text || type == .int2 || type == .int4 || type == .int8) {
                 let data = PostgresData(
                     type: type,
                     typeModifier: nil,
                     formatCode: self.formatCode,
-                    value: iValue)
+                    value: nil)
                 array.append(data)
               } else {
-                assert(1 == 2, "Unhandled Data type, expecting TEXT field")
+                assert(1 == 2, "Unhandled Data type, expecting TEXT or INT field type")
               }
             } else {
-            
               let iValue = value.readSlice(length: numericCast(iLength ?? 0))
               let data = PostgresData(
                   type: type,
                   typeModifier: nil,
                   formatCode: self.formatCode,
                   value: iValue)
-              
+
               array.append(data)
             }
           }
